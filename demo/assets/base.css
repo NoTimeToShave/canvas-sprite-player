@@ -1,0 +1,13 @@
+body {
+	text-align: center;
+}
+
+canvas {
+	display: block;
+	margin: 0 auto;
+}
+
+canvas + div {
+	margin-bottom: 15px;
+	margin-top: 15px;
+}
