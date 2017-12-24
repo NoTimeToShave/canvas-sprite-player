@@ -1,0 +1,21 @@
+{
+  "name": "canvas-sprite-player",
+  "version": "1.0.0",
+  "description": "A canvas sprite engine/player that contains play and pause functionality as well as custom events.",
+  "main": "sprite-player.js",
+  "scripts": {
+    "premin": "npm run lint",
+    "min": "uglifyjs sprite-player.js -o sprite-player.min.js -c -m",
+    "lint": "jshint sprite-player.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:NoTimeToShave/canvas-sprite-player.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "jshint": "^2.9.5"
+  }
+}

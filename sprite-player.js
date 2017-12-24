@@ -226,11 +226,11 @@ function SpritePlayer( options ) {
 	 *****************************/
 	pub.play = function() {
 		play();
-	}
+	};
 
 	pub.pause = function() {
 		pause();
-	}
+	};
 
 	/******************************
 	 * Initialize
