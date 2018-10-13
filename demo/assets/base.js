@@ -1,55 +1,56 @@
 // HTMLElements
-var underGround1 = document.getElementById( 'underground-1' ),
-	underGround1StatusPlay = document.getElementById( 'underground-1-status-play' ),
-	underGround1StatusFrame = document.getElementById( 'underground-1-status-frame' );
+var underground1 = document.getElementById( 'underground-1' ),
+	underground1StatusPlay = document.getElementById( 'underground-1-status-play' ),
+	underground1StatusFrame = document.getElementById( 'underground-1-status-frame' );
 
 // SpritePlayer
-var playerUnderground = SpritePlayer( {
-	autoPlay: true,
-	canvas: underGround1,
-	drawClock: 10,
-	drawUnit: 'fps',
-	frameCount: 20,
-	frameHeight: 270,
-	frameWidth: 480,
-	imgSrc: 'assets/underground-traffic.jpg',
-	loop: true,
-	spritesPerRow: 10,
+var playerUndergroundFrameCount = 20,
+	playerUnderGround1 = SpritePlayer( {
+		autoPlay: true,
+		canvas: underground1,
+		drawClock: 10,
+		drawUnit: 'fps',
+		frameCount: playerUndergroundFrameCount,
+		frameHeight: 270,
+		frameWidth: 480,
+		imgSrc: 'assets/underground-traffic.jpg',
+		loop: true,
+		spritesPerRow: 10,
 } );
 
 /*
  * Events
  */
-underGround1.addEventListener( 'spriteplay', function() {
-	underGround1StatusPlay.innerHTML = 'Playing';
+underground1.addEventListener( 'spriteplay', function() {
+	underground1StatusPlay.innerHTML = 'Playing';
 } );
 
-underGround1.addEventListener( 'spriteended', function() {
+underground1.addEventListener( 'spriteended', function() {
 	// spriteended does not fire if SpritePlayer is set to loop
-	underGround1StatusPlay.innerHTML = 'Ended';
+	underground1StatusPlay.innerHTML = 'Ended';
 } );
 
-underGround1.addEventListener( 'spritepause', function() {
-	underGround1StatusPlay.innerHTML = 'Paused';
+underground1.addEventListener( 'spritepause', function() {
+	underground1StatusPlay.innerHTML = 'Paused';
 } );
 
-underGround1.addEventListener( 'spritetimeupdate', function() {
-	underGround1StatusFrame.innerHTML = this.currentFrame;
+underground1.addEventListener( 'spritetimeupdate', function() {
+	underground1StatusFrame.innerHTML = ( this.currentFrame + 1 ) + ' of ' + playerUndergroundFrameCount;
 } );
 
 /*
  * Controls
  */
 document.getElementById( 'underground-1-play' ).addEventListener( 'click', function() {
-	playerUnderground.play();
+	playerUnderGround1.play();
 } );
 
 document.getElementById( 'underground-1-pause' ).addEventListener( 'click', function() {
-	playerUnderground.pause();
+	playerUnderGround1.pause();
 } );
 
 document.getElementById( 'underground-1-replay' ).addEventListener( 'click', function() {
-	playerUnderground.currentFrame = 0;
-	playerUnderground.play();
+	playerUnderGround1.currentFrame = 0;
+	playerUnderGround1.play();
 } );
 
