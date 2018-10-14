@@ -4,38 +4,37 @@ var underground1 = document.getElementById( 'underground-1' ),
 	underground1StatusFrame = document.getElementById( 'underground-1-status-frame' );
 
 // SpritePlayer
-var playerUndergroundFrameCount = 20,
-	playerUnderGround1 = SpritePlayer( {
+var playerUnderGround1 = SpritePlayer( {
 		autoPlay: true,
 		canvas: underground1,
 		drawClock: 10,
 		drawUnit: 'fps',
-		frameCount: playerUndergroundFrameCount,
+		frameCount: 20,
 		frameHeight: 270,
 		frameWidth: 480,
 		imgSrc: 'assets/underground-traffic.jpg',
 		loop: true,
 		spritesPerRow: 10,
-} );
+	} );
 
 /*
  * Events
  */
-underground1.addEventListener( 'spriteplay', function() {
+playerUnderGround1.on( 'spriteplay', function( e ) {
 	underground1StatusPlay.innerHTML = 'Playing';
 } );
 
-underground1.addEventListener( 'spriteended', function() {
+playerUnderGround1.on( 'spriteended', function( e ) {
 	// spriteended does not fire if SpritePlayer is set to loop
 	underground1StatusPlay.innerHTML = 'Ended';
 } );
 
-underground1.addEventListener( 'spritepause', function() {
+playerUnderGround1.on( 'spritepause', function( e ) {
 	underground1StatusPlay.innerHTML = 'Paused';
 } );
 
-underground1.addEventListener( 'spritetimeupdate', function() {
-	underground1StatusFrame.innerHTML = ( this.currentFrame + 1 ) + ' of ' + playerUndergroundFrameCount;
+playerUnderGround1.on( 'spritetimeupdate', function( e ) {
+	underground1StatusFrame.innerHTML = ( this.currentFrame + 1 ) + ' of ' + this.config.frameCount;
 } );
 
 /*
@@ -50,7 +49,11 @@ document.getElementById( 'underground-1-pause' ).addEventListener( 'click', func
 } );
 
 document.getElementById( 'underground-1-replay' ).addEventListener( 'click', function() {
-	playerUnderGround1.currentFrame = 0;
+	playerUnderGround1.setCurrentFrame(0);
 	playerUnderGround1.play();
+} );
+
+document.getElementById( 'underground-1-half-second' ).addEventListener( 'click', function() {
+	playerUnderGround1.setCurrentTime(.5);
 } );
 

@@ -4,20 +4,21 @@
 		<meta charset="utf-8">
 		<meta http-equiv="x-ua-compatible" content="ie=edge">
 		<title>Canvas Sprite Player Demo</title>
-		<link rel="stylesheet" href="assets/base.css">
+		<link rel="stylesheet" href="assets/demo.css">
 	</head>
 	<body>
 		<h1>Demo</h1>
-		<canvas id="underground-1"></canvas>
+		<canvas id="underground-1" style="width: 480px; height: 270px;"></canvas>
 		<div>
 			Current status: <span id="underground-1-status-play"></span><br>
 			Current frame: <span id="underground-1-status-frame"></span>
 		</div>
 		<button id="underground-1-play" type="button">Play</button>
 		<button id="underground-1-pause" type="button">Pause</button>
-		<button id="underground-1-replay" type="button">Replay from Beginning</button>
+		<button id="underground-1-replay" type="button">Play from beginning</button>
+		<button id="underground-1-half-second" type="button">Set time to .5 seconds</button>
 
 		<script src="../sprite-player.js"></script>
-		<script src="assets/base.js"></script>
+		<script src="assets/demo.js"></script>
 	</body>
 </html>

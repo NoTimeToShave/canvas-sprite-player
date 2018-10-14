@@ -24,7 +24,7 @@
  * @return object
  */
 function SpritePlayer( options ) {
-	// Set configuration
+	// Configuration from options
 	var autoPlay      = options.autoPlay      !== undefined ? options.autoPlay      : false,
 		canvas        = options.canvas,
 		drawClock     = options.drawClock     !== undefined ? options.drawClock     : 0,
@@ -36,73 +36,38 @@ function SpritePlayer( options ) {
 		loop          = options.loop          !== undefined ? options.loop          : false,
 		spritesPerRow = options.spritesPerRow !== undefined ? options.spritesPerRow : frameCount;
 	
-	var eventPlay, eventEnded, eventTimeupdate, eventPause, // events
-		pub = {
-			// Public properties
-			currentFrame: 0,                 // current frame
-		},                                   // public scope
+	// Private variables
+	var callbacks = {},                      // event callbacks. based on Emitter: https://github.com/component/emitter
 		reqId,                               // requestAnimationFrame ID
 		context = canvas.getContext( '2d' ), // canvas drawing context
 		img = new Image(),                   // image object
 		clock = {};                          // multi-use timing object
-
-	/******************************
-	 * Private
-	 *****************************/
+		currentFrame = 0;
 	
-	/**
-	 * Initialize the object and canvas
-	 */
-	function init() {
-		// Custom events
-		// https://developer.mozilla.org/en-US/docs/Web/Guide/Events/Creating_and_triggering_events
-		eventPlay = document.createEvent( 'Event' );
-		eventPlay.initEvent( 'spriteplay', true, true );
-		eventEnded = document.createEvent( 'Event' );
-		eventEnded.initEvent( 'spriteended', true, true );
-		eventTimeupdate = document.createEvent( 'Event' );
-		eventTimeupdate.initEvent( 'spritetimeupdate', true, true );
-		eventPause = document.createEvent( 'Event' );
-		eventPause.initEvent( 'spritepause', true, true );
+	// Public scope
+	var pub = {
+			config       : options, // read-only
+			currentFrame : 0,       // read-only
+			currentTime  : 0,       // read-only
+		};
 
-		// Set canvas dimensions to match frame dimensions
-		canvas.height = frameHeight;
-		canvas.width = frameWidth;
-		
-		if ( autoPlay ) {
-			play();
-		}
-	}
-
-	/**
-	 * Set the image source and load the image
+	/********************
 	 *
-	 * @param function callback Callback function for when image is complete
-	 */
-	function loadImage( callback ) {
-		// If image is already loaded, move along
-		if ( img.complete && img.naturalWidth !== undefined && img.naturalWidth != 0 ) {
-			callback();
-		} else {
-			img.addEventListener( 'load', function() {
-				callback();
-			} );
-
-			img.src = imgSrc;
-		}
-	}
+	 * Public methods
+	 *
+	 *******************/
 
 	/**
 	 * Play animation
 	 */
-	function play() {
+	pub.play = function() {
 		// If already animating, do nothing
 		if ( reqId !== undefined ) {
 			return;
 		}
 
 		loadImage( function() {
-			canvas.dispatchEvent( eventPlay );
+			pub.emit( 'spriteplay' );
 
 			if ( 'repaint' == drawUnit ) {
 				// Init repaint loop
@@ -118,12 +83,12 @@ function SpritePlayer( options ) {
 				loopFPS();
 			}
 		} );
-	}
+	};
 
 	/**
 	 * Pause animation
 	 */
-	function pause() {
+	pub.pause = function() {
 		// If already paused, do nothing
 		if ( reqId === undefined ) {
 			return;
@@ -132,7 +97,133 @@ function SpritePlayer( options ) {
 		window.cancelAnimationFrame( reqId );
 		reqId = undefined;
 
-		canvas.dispatchEvent( eventPause );
+		pub.emit( 'spritepause' );
+	};
+
+	/**
+	 * Set an event listener
+	 *
+	 * @param string   event the event to listen for
+	 * @param function fn    the callback function
+	 */
+	pub.on = function( event, fn ) {
+		( callbacks[ '$' + event ] = callbacks[ '$' + event ] || [] ).push( fn );
+	};
+
+	/**
+	 * Remove an event listener/all event listeners.
+	 * If called w/o arguments, delete all event listeners
+	 * If called w/o a function, will remove all callbacks for an event
+	 *
+	 * @param string   event (optional) the event to listen for
+	 * @param function fn    (optional) the callback function
+	 */
+	pub.off = function( event, fn ) {
+		// all
+		if ( 0 == arguments.length ) {
+			callbacks = {};
+			return;
+		}
+
+		// specific event
+		var _callbacks = callbacks[ '$' + event ];
+		if ( ! _callbacks ) {
+			return;
+		}
+
+		// remove all handlers
+		if ( 1 == arguments.length ) {
+			delete callbacks[ '$' + event ];
+			return;
+		}
+
+		// remove specific handler
+		var cb;
+		for ( var i = 0; i < _callbacks.length; i++ ) {
+			cb = _callbacks[ i ];
+			if ( cb === fn || cb.fn === fn ) {
+				_callbacks.splice( i, 1 );
+				break;
+			}
+		}
+
+		// Remove event specific arrays for event types that no
+		// one is subscribed for to avoid memory leak.
+		if ( _callbacks.length === 0 ) {
+		  delete callbacks[ '$' + event ];
+		}
+	};
+
+	/**
+	 * Trigger an event, invoking all registered callbacks
+	 * 
+	 * @param string event the event to trigger
+	 */
+	pub.emit = function( event ) {
+		var args = [].slice.call( arguments, 1 ),
+			_callbacks = callbacks[ '$' + event ];
+		args.unshift( event ); // Add event string to return args
+
+		if ( _callbacks ) {
+			_callbacks = _callbacks.slice( 0 );
+			for ( var i = 0, len = _callbacks.length; i < len; ++i ) {
+				_callbacks[ i ].apply( pub, args );
+			}
+		}
+	};
+
+	/**
+	 * Set the sprite to a specific frame.
+	 * Note that frame counts start at 0.
+	 *
+	 * @param integer frame frame number
+	 */
+	pub.setCurrentFrame = function( frame ) {
+		currentFrame = frame;
+		draw();
+		next();
+	};
+
+	/**
+	 * Set the sprite to a specific time.
+	 * This is an approximation of video currentTime.
+	 * It uses the fps of the animation to determine frame.
+	 *
+	 * @param float time time in seconds
+	 */
+	pub.setCurrentTime = function( time ) {
+		if ( 'repaint' == drawUnit ) {
+			console.error( 'Cannot set current time with drawUnit: repaint' );
+			return;
+		}
+
+		currentFrame = Math.floor( time * drawClock );
+		draw();
+		next();
+	};
+
+	/********************
+	 *
+	 * Private functions
+	 *
+	 *******************/
+
+	 /**
+	 * Set the image source and load the image
+	 *
+	 * @param function callback Callback function for when image is complete
+	 */
+	function loadImage( callback ) {
+		// If image is already loaded, move along
+		if ( img.complete && img.naturalWidth !== undefined && img.naturalWidth != 0 ) {
+			callback();
+		} else {
+			img.addEventListener( 'load', function() {
+				callback();
+			} );
+
+			img.src = imgSrc;
+		}
 	}
 
 	/**
@@ -175,7 +266,7 @@ function SpritePlayer( options ) {
 	}	
 
 	/**
-	 * Display the frame set by pub.currentFrame
+	 * Display the frame set by currentFrame
 	 */
 	function draw() {
 		// Clear the canvas
@@ -184,8 +275,8 @@ function SpritePlayer( options ) {
 		// Draw the animation
 		context.drawImage(
 			img,
-			pub.currentFrame % spritesPerRow * frameWidth,                // X Position of source image.
-			Math.floor( pub.currentFrame / spritesPerRow ) * frameHeight, // Y Position of source image.
+			currentFrame % spritesPerRow * frameWidth,                // X Position of source image.
+			Math.floor( currentFrame / spritesPerRow ) * frameHeight, // Y Position of source image.
 			frameWidth,
 			frameHeight,
 			0,
@@ -194,9 +285,12 @@ function SpritePlayer( options ) {
 			frameHeight
 		);
 
-		// Set read-only currentFrame property of canvas
-		canvas.currentFrame = pub.currentFrame;
-		canvas.dispatchEvent( eventTimeupdate );
+		if ( 'fps' == drawUnit ) {
+			pub.currentTime = pub.currentFrame / drawClock;
+		}
+
+		pub.currentFrame = currentFrame;
+		pub.emit( 'spritetimeupdate' );
 	}
 	
 	/**
@@ -205,37 +299,33 @@ function SpritePlayer( options ) {
 	 */
 	function next() {
 		// If the current frame index is in range
-		if ( pub.currentFrame < frameCount - 1 ) {	
+		if ( currentFrame < frameCount - 1 ) {	
 			// Go to the next frame
-			pub.currentFrame += 1;
+			currentFrame += 1;
 		} else if ( loop ) {
 			// Go to beginning
-			pub.currentFrame = 0;
+			currentFrame = 0;
 		} else {
 			// If not looping and animation has ended, be done
 			window.cancelAnimationFrame( reqId );
 			reqId = undefined;
-
-			canvas.dispatchEvent( eventEnded );
+			
+			pub.emit( 'spriteended' );
 		}
 	}
-
-
-	/******************************
-	 * Public methods
-	 *****************************/
-	pub.play = function() {
-		play();
-	};
-
-	pub.pause = function() {
-		pause();
-	};
 
 	/******************************
 	 * Initialize
 	 *****************************/
-	init();
+	
+	// Public read-only properties
+	pub.config = options;
+	pub.currentFrame = 0;
+	pub.currentTime = 0;
+	
+	if ( autoPlay ) {
+		pub.play();
+	}
 
 	return pub;
 }

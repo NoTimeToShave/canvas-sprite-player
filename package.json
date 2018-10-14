@@ -1,6 +1,6 @@
 {
   "name": "canvas-sprite-player",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A canvas sprite engine/player that contains play and pause functionality as well as custom events.",
   "main": "sprite-player.js",
   "scripts": {
