@@ -38,10 +38,10 @@ function SpritePlayer( options ) {
 	
 	// Private variables
 	var callbacks = {},                      // event callbacks. based on Emitter: https://github.com/component/emitter
-		reqId,                               // requestAnimationFrame ID
+		reqId = null,                        // requestAnimationFrame ID
 		context = canvas.getContext( '2d' ), // canvas drawing context
 		img = new Image(),                   // image object
-		clock = {};                          // multi-use timing object
+		clock = {},                          // multi-use timing object
 		currentFrame = 0;
 	
 	// Public scope
@@ -62,7 +62,7 @@ function SpritePlayer( options ) {
 	 */
 	pub.play = function() {
 		// If already animating, do nothing
-		if ( reqId !== undefined ) {
+		if ( null !== reqId ) {
 			return;
 		}
 
@@ -90,12 +90,12 @@ function SpritePlayer( options ) {
 	 */
 	pub.pause = function() {
 		// If already paused, do nothing
-		if ( reqId === undefined ) {
+		if ( null === reqId ) {
 			return;
 		}
 
 		window.cancelAnimationFrame( reqId );
-		reqId = undefined;
+		reqId = null;
 
 		pub.emit( 'spritepause' );
 	};
@@ -277,12 +277,12 @@ function SpritePlayer( options ) {
 			img,
 			currentFrame % spritesPerRow * frameWidth,                // X Position of source image.
 			Math.floor( currentFrame / spritesPerRow ) * frameHeight, // Y Position of source image.
-			frameWidth,
-			frameHeight,
-			0,
-			0,
-			frameWidth,
-			frameHeight
+			frameWidth,      // only grab frame width from full sprite sheet
+			frameHeight,     // only grab frame height from full sprite sheet
+			0,               // X Position on canvas
+			0,               // Y Position on canvas
+			frameWidth,      // draw size width on canvas
+			frameHeight      // draw size height on canvas
 		);
 
 		if ( 'fps' == drawUnit ) {
@@ -308,7 +308,7 @@ function SpritePlayer( options ) {
 		} else {
 			// If not looping and animation has ended, be done
 			window.cancelAnimationFrame( reqId );
-			reqId = undefined;
+			reqId = null;
 			
 			pub.emit( 'spriteended' );
 		}
