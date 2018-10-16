@@ -5,44 +5,54 @@
  *     and here: http://jsfiddle.net/chicagogrooves/nRpVD/2/
  *
  * @param object options
- *     @var boolean     autoPlay      Whether to begin loading and playing as soon as the object is defined
- *     @var HTMLElement canvas        The canvas for which to paint
- *     @var integer     drawClock     If drawUnit == 'repaint', the animation will happen as fast as the browser can draw it,
- *                                        which may be too fast. This number represents the number of repaints to skip.
- *                                        For example, setting this to 1 will skip a frame between each repaint,
- *                                        effectively halving the frame rate. 2 will skip two frames, etc ...
- *                                    If drawUnit == 'fps', the animation will attempt to maintain the frames-per-second
- *                                        rate specified by this number. For example, setting this to 10 will make the animation
- *                                        attempt to maintain 10 frames-per-second.
- *     @var string      drawUnit      Possible values: 'repaint' or 'fps'. See drawClock above.
- *     @var integer     frameCount    Number of frames on the sprite sheet
- *     @var integer     frameHeight   Height in pixels of each sprite
- *     @var integer     frameWidth    Width in pixels of each sprite
- *     @var string      imgSrc        URL of sprite sheet image
- *     @var boolean     loop          If true, animation will start over after the last frame
- *     @var integer     spritesPerRow Number of sprites per row on sprite sheet
+ *     @var boolean     autoPlay        Whether to begin loading and playing as soon as the object is defined
+ *     @var HTMLElement canvas          The canvas for which to paint
+ *     @var boolean     clearBeforeDraw Clear canvas before drawing a new frame. Needed for transparent PNGs.
+ *     @var integer     drawClock       If drawUnit == 'repaint', the animation will happen as fast as the browser can draw it,
+ *                                          which may be too fast. This number represents the number of repaints to skip.
+ *                                          For example, setting this to 1 will skip a frame between each repaint,
+ *                                          effectively halving the frame rate. 2 will skip two frames, etc ...
+ *                                      If drawUnit == 'fps', the animation will attempt to maintain the frames-per-second
+ *                                          rate specified by this number. For example, setting this to 10 will make the animation
+ *                                          attempt to maintain 10 frames-per-second.
+ *     @var string      drawUnit        Possible values: 'repaint' or 'fps'. See drawClock above.
+ *     @var integer     frameCount      Number of frames on the sprite sheet
+ *     @var integer     frameHeight     Height in pixels of each sprite
+ *     @var integer     frameWidth      Width in pixels of each sprite
+ *     @var string      imgSeqDel       Delimiter for Base64 image sequence
+ *     @var string      imgSeqSrc       URL of Base64 image sequence
+ *     @var string      imgSrc          URL of sprite sheet image
+ *     @var boolean     loop            If true, animation will start over after the last frame
+ *     @var integer     spritesPerRow   Number of sprites per row on sprite sheet
  * @return object
  */
 function SpritePlayer( options ) {
 	// Configuration from options
-	var autoPlay      = options.autoPlay      !== undefined ? options.autoPlay      : false,
-		canvas        = options.canvas,
-		drawClock     = options.drawClock     !== undefined ? options.drawClock     : 0,
-		drawUnit      = options.drawUnit      !== undefined ? options.drawUnit      : 'repaint',
-		frameCount    = options.frameCount    !== undefined ? options.frameCount    : 0,
-		frameHeight   = options.frameHeight   !== undefined ? options.frameHeight   : 0,
-		frameWidth    = options.frameWidth    !== undefined ? options.frameWidth    : 0,
-		imgSrc        = options.imgSrc        !== undefined ? options.imgSrc        : '',
-		loop          = options.loop          !== undefined ? options.loop          : false,
-		spritesPerRow = options.spritesPerRow !== undefined ? options.spritesPerRow : frameCount;
+	var autoPlay        = options.autoPlay      !== undefined ? options.autoPlay        : false,
+		canvas          = options.canvas,
+		clearBeforeDraw = options.tarnsPng      !== undefined ? options.clearBeforeDraw : false,
+		drawClock       = options.drawClock     !== undefined ? options.drawClock       : 0,
+		drawUnit        = options.drawUnit      !== undefined ? options.drawUnit        : 'repaint',
+		frameCount      = options.frameCount    !== undefined ? options.frameCount      : 0,
+		frameHeight     = options.frameHeight   !== undefined ? options.frameHeight     : 0,
+		frameWidth      = options.frameWidth    !== undefined ? options.frameWidth      : 0,
+		imgSeqDel       = options.imgSeqDel     !== undefined ? options.imgSeqDel       : '|',
+		imgSeqSrc       = options.imgSeqSrc     !== undefined ? options.imgSeqSrc       : '',
+		imgSrc          = options.imgSrc        !== undefined ? options.imgSrc          : '',
+		loop            = options.loop          !== undefined ? options.loop            : false,
+		spritesPerRow   = options.spritesPerRow !== undefined ? options.spritesPerRow   : frameCount;
 	
 	// Private variables
 	var callbacks = {},                      // event callbacks. based on Emitter: https://github.com/component/emitter
 		reqId = null,                        // requestAnimationFrame ID
 		context = canvas.getContext( '2d' ), // canvas drawing context
-		img = new Image(),                   // image object
+		img = new Image(),                   // image object that's drawn on canvas
+		imgSeq = [],                         // array of base64 image strings
+		mode = '',                           // 'sprite' or 'seqbase64'
 		clock = {},                          // multi-use timing object
-		currentFrame = 0;
+		currentFrame = 0,                    // current frame in the animation
+		seqListenerAdded = false,            // if the mode is seqbase64 and the img loaded event has been set
+		draw = function() { return; };       // abstract draw function. set dynamically based on mode
 	
 	// Public scope
 	var pub = {
@@ -66,7 +76,7 @@ function SpritePlayer( options ) {
 			return;
 		}
 
-		loadImage( function() {
+		loadAsset( function() {
 			pub.emit( 'spriteplay' );
 
 			if ( 'repaint' == drawUnit ) {
@@ -209,20 +219,44 @@ function SpritePlayer( options ) {
 	 *******************/
 
 	 /**
-	 * Set the image source and load the image
+	 * Load the asset which will either be a sprite or a base64 encoded sequence
 	 *
 	 * @param function callback Callback function for when image is complete
 	 */
-	function loadImage( callback ) {
-		// If image is already loaded, move along
-		if ( img.complete && img.naturalWidth !== undefined && img.naturalWidth != 0 ) {
-			callback();
-		} else {
-			img.addEventListener( 'load', function() {
+	function loadAsset( callback ) {
+		if ( 'sprite' == mode ) {
+			// If image is already loaded, move along
+			if ( img.complete && img.naturalWidth !== undefined && img.naturalWidth != 0 ) {
 				callback();
-			} );
+			} else {
+				img.addEventListener( 'load', function() {
+					callback();
+				} );
 
-			img.src = imgSrc;
+				img.src = imgSrc;
+			}
+		} else if ( 'seqbase64' == mode ) {
+			// If sequence is already set, move along
+			if ( imgSeq.length > 0 ) {
+				callback();
+			} else {
+				// Load sequence file via XMLHttpRequest()
+				var xhr = new XMLHttpRequest();
+				xhr.onreadystatechange = function () {
+					if ( xhr.readyState === 4 ) {
+						if ( xhr.status === 200 ) {
+							// Create array of images from base64 text
+							imgSeq = xhr.responseText.split( imgSeqDel );
+							callback();
+						} else {
+							console.error( 'Could not load ' + imgSeqSrc + ' -  Status: ' + xhr.status );
+						}
+					}
+				};
+
+				xhr.open( 'GET', imgSeqSrc );
+				xhr.send();
+			}
 		}
 	}
 
@@ -263,16 +297,17 @@ function SpritePlayer( options ) {
 			draw();
 			next();
 		}
-	}	
+	}
 
 	/**
-	 * Display the frame set by currentFrame
+	 * Display the sprite frame set by currentFrame.
+	 * The draw() function will be set to either _drawSprite or _drawSequence
 	 */
-	function draw() {
-		// Clear the canvas
-		context.clearRect( 0, 0, frameWidth, frameHeight );
-
-		// Draw the animation
+	function _drawSprite() {
+		// Draw the sprite
+		if ( clearBeforeDraw ) {
+			context.clearRect( 0, 0, frameWidth, frameHeight );
+		}
 		context.drawImage(
 			img,
 			currentFrame % spritesPerRow * frameWidth,                // X Position of source image.
@@ -286,7 +321,33 @@ function SpritePlayer( options ) {
 		);
 
 		if ( 'fps' == drawUnit ) {
-			pub.currentTime = pub.currentFrame / drawClock;
+			pub.currentTime = currentFrame / drawClock;
+		}
+
+		pub.currentFrame = currentFrame;
+		pub.emit( 'spritetimeupdate' );
+	}
+
+	/**
+	 * Display the sequence frame set by currentFrame
+	 * The draw() function will be set to either _drawSprite or _drawSequence
+	 */
+	function _drawSequence() {
+		// Draw the image in sequence
+		if ( ! seqListenerAdded ) {
+			img.addEventListener( 'load', function() {
+				if ( clearBeforeDraw ) {
+					context.clearRect( 0, 0, frameWidth, frameHeight );
+				}
+				context.drawImage( img, 0, 0 );
+
+				seqListenerAdded = true;
+			} );
+		}
+		img.src = imgSeq[ currentFrame ];
+
+		if ( 'fps' == drawUnit ) {
+			pub.currentTime = currentFrame / drawClock;
 		}
 
 		pub.currentFrame = currentFrame;
@@ -318,6 +379,15 @@ function SpritePlayer( options ) {
 	 * Initialize
 	 *****************************/
 	
+	// Set mode and draw function
+	if ( imgSrc ) {
+		mode = 'sprite';
+		draw = _drawSprite;
+	} else if ( imgSeqSrc ) {
+		mode = 'seqbase64';
+		draw = _drawSequence;
+	}
+
 	// Public read-only properties
 	pub.config = options;
 	pub.currentFrame = 0;
