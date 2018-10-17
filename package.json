@@ -1,12 +1,16 @@
 {
   "name": "canvas-sprite-player",
-  "version": "2.0.0",
+  "version": "1.0.1",
   "description": "A canvas sprite engine/player that contains play and pause functionality as well as custom events.",
   "main": "sprite-player.js",
   "scripts": {
     "premin": "npm run lint",
     "min": "uglifyjs sprite-player.js -o sprite-player.min.js -c -m",
-    "lint": "jshint sprite-player.js"
+    "lint": "jshint sprite-player.js",
+    "production": "npm run min --silent && npm run version:append --silent",
+    "version:append": "echo \"/*! Cavvas Sprite Player v - $(npm run version:extract --silent)\n * © Phillip Dodson\n * Build time: $(date '+%m-%d-%Y %H:%M:%S')\n */\n$(cat sprite-player.min.js)\" > sprite-player.min.js",
+    "version:bump": "npm version patch --no-git-tag-version --silent",
+    "version:extract": "cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]'"
   },
   "repository": {
     "type": "git",
@@ -16,6 +20,6 @@
   "license": "ISC",
   "dependencies": {},
   "devDependencies": {
-    "jshint": "^2.9.5"
+    "jshint": "^2.9.6"
   }
 }
