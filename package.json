@@ -8,8 +8,7 @@
     "min": "uglifyjs sprite-player.js -o sprite-player.min.js -c -m",
     "lint": "jshint sprite-player.js",
     "production": "npm run min --silent && npm run version:append --silent",
-    "version:append": "echo \"/*! Canvas Sprite Player v - $(npm run version:extract --silent)\n * © Phillip Dodson\n * Build time: $(date '+%m-%d-%Y %H:%M:%S')\n */\n$(cat sprite-player.min.js)\" > sprite-player.min.js",
-    "version:bump": "npm version patch --no-git-tag-version --silent",
+    "version:append": "echo \"/*! Canvas Sprite Player v.$(npm run version:extract --silent)\n * https://github.com/phillip-ntts/canvas-sprite-player\n * Build time: $(date '+%m-%d-%Y %H:%M:%S')\n */\n$(cat sprite-player.min.js)\" > sprite-player.min.js",
     "version:extract": "cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]'"
   },
   "repository": {
